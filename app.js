@@ -377,16 +377,13 @@ async function loadStats() {
 }
 
 function renderStats(data) {
-  const current =
-    (data.weeks || []).find(
-      w => w.weekStart === data.currentWeek.start
-    ) || {records:[]};
+  const currentRecords = data.currentRecords || [];
 
-  const plan = current.records.reduce(
+  const plan = currentRecords.reduce(
     (s,r) => s + Number(r.plan || 0), 0
   );
 
-  const fact = current.records.reduce(
+  const fact = currentRecords.reduce(
     (s,r) => s + Number(r.fact || 0), 0
   );
 
