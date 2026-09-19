@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f6f1e8">
+  <title>Сычиная охота</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="login" class="screen">
+    <div class="card login-card">
+      <div class="owl">🦉</div>
+      <h1>Сычиная охота</h1>
+      <p class="muted">Введите пароль для доступа</p>
+      <form id="loginForm">
+        <input id="password" type="password" placeholder="Пароль" autocomplete="current-password" required>
+        <button type="submit">Войти</button>
+        <p id="loginError" class="error"></p>
+      </form>
+    </div>
+  </div>
+
+  <main id="app" class="hidden">
+    <header>
+      <div>
+        <div class="eyebrow">Учет мышей</div>
+        <h1>🦉 Сычиная охота</h1>
+      </div>
+      <button id="logout" class="ghost small">Выйти</button>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="entry">Внести данные</button>
+      <button class="tab" data-tab="stats">Статистика</button>
+    </nav>
+
+    <section id="entry" class="panel active">
+      <div class="card">
+        <div class="weekbox">
+          <span>Текущая неделя</span>
+          <strong id="weekLabel">...</strong>
+          <small>вторник - понедельник</small>
+        </div>
+
+        <label for="name">Участник</label>
+        <select id="name">
+          <option value="">Выберите имя</option>
+        </select>
+        <p id="loadHint" class="hint"></p>
+
+        <div class="grid2">
+          <div>
+            <label for="plan">План мышей</label>
+            <input id="plan" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+          </div>
+          <div>
+            <label for="fact">Факт мышей</label>
+            <input id="fact" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+          </div>
+        </div>
+
+        <button id="save">Сохранить</button>
+        <div id="message" class="message hidden"></div>
+      </div>
+    </section>
+
+    <section id="stats" class="panel">
+      <div class="stats-head">
+        <div>
+          <h2>Статистика</h2>
+          <p class="muted">Последняя запись человека за неделю является актуальной.</p>
+        </div>
+        <button id="download" class="ghost">Скачать CSV</button>
+      </div>
+      <div id="summary" class="summary"></div>
+      <div id="statsContent"></div>
+    </section>
+
+    <footer>Данные хранятся в Google Sheets</footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
