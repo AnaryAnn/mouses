@@ -389,14 +389,14 @@ function renderStats(data) {
     data.teamGoal == null ? null : Number(data.teamGoal);
 
   const shortage =
-    goal == null ? null : Math.max(0, goal - plan);
+    goal == null ? null : Math.max(0, goal - fact);
 
   const addPerPerson =
     shortage == null
       ? null
       : shortage === 0
         ? 0
-        : Math.ceil(shortage / Number(data.peopleCount || PEOPLE.length));
+        : Math.ceil(shortage / Math.max(1, Number(data.activePeopleCount || data.peopleCount || PEOPLE.length)));
 
   let catchup;
 
@@ -409,7 +409,7 @@ function renderStats(data) {
   } else {
     catchup =
       `<strong>+${addPerPerson} на человека</strong>` +
-      `<small>Не хватает ${shortage} мышей до цели по плану</small>`;
+      `<small>Не хватает ${shortage} мышей до цели по факту</small>`;
   }
 
   $("#currentStats").innerHTML = `
@@ -438,7 +438,12 @@ function renderStats(data) {
     </div>
   `;
 
-  const weeks = data.weeks || [];
+  const weeks = (data.weeks || []).filter(w => {
+    const start = String(w.weekStart || "").slice(0,10);
+    const end = String(w.weekEnd || "").slice(0,10);
+    return start === String(data.currentWeek?.start || "").slice(0,10)
+      && end === String(data.currentWeek?.end || "").slice(0,10);
+  });
 
   if (!weeks.length) {
     $("#statsContent").innerHTML =
@@ -504,7 +509,12 @@ $("#download").addEventListener("click", async () => {
       "Имя","План","Факт","Последнее изменение"
     ]];
 
-    (data.weeks || []).forEach(w => {
+    (data.weeks || []).filter(w => {
+      const start = String(w.weekStart || "").slice(0,10);
+      const end = String(w.weekEnd || "").slice(0,10);
+      return start === String(data.currentWeek?.start || "").slice(0,10)
+        && end === String(data.currentWeek?.end || "").slice(0,10);
+    }).forEach(w => {
       w.records.forEach(r => {
         rows.push([
           fmtDate(w.weekStart),
