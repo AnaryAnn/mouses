@@ -41,8 +41,9 @@ function currentWeek() {
   return {start, end};
 }
 
-function saveSession(p) {
+function saveSession(p, isAdmin=false) {
   localStorage.setItem("owl_password", p);
+  localStorage.setItem("owl_is_admin", isAdmin ? "1" : "0");
   localStorage.setItem(
     "owl_expires",
     String(Date.now() + SESSION_DAYS * 86400000)
@@ -51,7 +52,31 @@ function saveSession(p) {
 
 function clearSession() {
   localStorage.removeItem("owl_password");
+  localStorage.removeItem("owl_is_admin");
   localStorage.removeItem("owl_expires");
+}
+
+function isAdminSession() {
+  return localStorage.getItem("owl_is_admin") === "1";
+}
+
+function applyRoleVisibility() {
+  const admin = isAdminSession();
+  const settingsTab = document.querySelector('.tab[data-tab="settings"]');
+  const settingsPanel = document.querySelector('#settings');
+
+  if (settingsTab) settingsTab.classList.toggle("hidden", !admin);
+  if (settingsPanel && !admin) settingsPanel.classList.remove("active");
+
+  if (!admin && settingsTab?.classList.contains("active")) {
+    settingsTab.classList.remove("active");
+    const fallbackTab = document.querySelector('.tab:not([data-tab="settings"])');
+    if (fallbackTab) {
+      fallbackTab.classList.add("active");
+      const panel = document.querySelector('#' + fallbackTab.dataset.tab);
+      if (panel) panel.classList.add("active");
+    }
+  }
 }
 
 function getPassword() {
@@ -68,6 +93,7 @@ function getPassword() {
 function openApp() {
   $("#login").classList.add("hidden");
   $("#app").classList.remove("hidden");
+  applyRoleVisibility();
 
   const w = currentWeek();
   const label = `${fmtDate(w.start)} - ${fmtDate(w.end)}`;
@@ -154,7 +180,7 @@ $("#loginForm").addEventListener("submit", async e => {
       throw new Error("Неверный пароль");
     }
 
-    saveSession(password);
+    saveSession(password, Boolean(data.isAdmin));
     openApp();
     await loadParticipants();
   } catch(err) {
@@ -289,11 +315,15 @@ $$(".tab").forEach(btn => {
     $("#" + btn.dataset.tab).classList.add("active");
 
     if (btn.dataset.tab === "stats") await loadStats();
-    if (btn.dataset.tab === "settings") await loadSettings();
+    if (btn.dataset.tab === "settings") {
+      if (!isAdminSession()) return;
+      await loadSettings();
+    }
   });
 });
 
 async function loadSettings() {
+  if (!isAdminSession()) return;
   $("#settingsMessage").classList.add("hidden");
 
   try {
@@ -311,6 +341,7 @@ async function loadSettings() {
 }
 
 $("#saveGoal").addEventListener("click", async () => {
+  if (!isAdminSession()) return;
   const goal = $("#teamGoal").value;
 
   if (goal === "" || +goal < 0) {
@@ -551,8 +582,24 @@ $("#download").addEventListener("click", async () => {
   }
 });
 
-if (getPassword()) {
-  openApp();
-  loadParticipants();
+async function restoreSession() {
+  const password = getPassword();
+  if (!password) return;
+
+  try {
+    const data = await rawGet({action:"login"}, password);
+    if (!data.success || data.unauthorized) {
+      clearSession();
+      return;
+    }
+
+    saveSession(password, Boolean(data.isAdmin));
+    openApp();
+    await loadParticipants();
+  } catch (err) {
+    console.error("Не удалось восстановить сессию", err);
+    clearSession();
+  }
 }
 
+restoreSession();
