@@ -555,3 +555,4 @@ if (getPassword()) {
   openApp();
   loadParticipants();
 }
+
