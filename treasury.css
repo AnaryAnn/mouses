@@ -1,0 +1,59 @@
+/* Сокровищница Робосычика: все стили ограничены отдельной вкладкой. */
+.treasury-app{font-family:Georgia,'Times New Roman',serif;color:#f7e9c9;background:radial-gradient(ellipse at top,#604431 0%,#241a16 72%);padding:23px 18px 32px;border-radius:20px;min-height:400px}
+.treasury-app *{box-sizing:border-box}
+.treasury-app button{width:auto;margin:0;font-weight:inherit}
+.treasury-head{text-align:center;padding:8px 5px 20px}
+.treasury-eyebrow{display:block;font:700 10px system-ui;letter-spacing:3px;color:#e4b87b}
+.treasury-head h2{font-size:clamp(29px,6vw,48px);color:#f6db9e;margin:10px 0 4px}
+.treasury-head p{margin:0;color:#cbb99f;font-size:16px}
+.treasury-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.treasury-app .treasury-mode,.treasury-app .treasury-filters button,.treasury-app .treasury-refresh{background:#39291f;color:#eedbb9;border:1px solid #856344;border-radius:9px;cursor:pointer;padding:12px 7px}
+.treasury-app .treasury-mode{font:600 13px system-ui;min-width:0}
+.treasury-app .treasury-mode.active,.treasury-app .treasury-filters button.selected{background:#aa7d43;color:#211710;border-color:#dfb577}
+.treasury-person-box{background:#35261c;border:1px solid #755537;padding:13px 15px 12px;border-radius:12px;margin-bottom:14px}
+.treasury-person-box[hidden]{display:none}
+.treasury-person-box label{font:700 14px system-ui;color:#f4d59b;margin:0 0 8px}
+.treasury-person-combo{position:relative}
+.treasury-app #treasuryPersonSearch{width:100%;padding:12px 14px;border:1px solid #a68b68;border-radius:9px;background:#fdf3df;color:#332315;font:15px system-ui;outline-offset:2px}
+.treasury-person-list{position:absolute;z-index:80;top:calc(100% + 5px);left:0;right:0;max-height:260px;overflow-y:auto;border-radius:10px;border:1px solid #b89161;background:#fdf3df;box-shadow:0 10px 30px #140b08a8;padding:5px}
+.treasury-person-list[hidden]{display:none}
+.treasury-app .treasury-person-option{display:block;width:100%;text-align:left;background:transparent;color:#332315;padding:10px;border:0;border-radius:7px;font:600 14px system-ui;cursor:pointer}
+.treasury-app .treasury-person-option:hover,.treasury-app .treasury-person-option:focus-visible{background:#ead8b8}
+.treasury-no-results{color:#665442;padding:10px;font:13px system-ui}
+.treasury-person-hint{font:12px/1.5 system-ui;color:#d7bd95;margin:8px 0 0}
+.treasury-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#37291f;border:1px solid #7c5b3c;border-radius:12px;padding:15px 18px}
+.treasury-summary div strong{display:block;font-size:23px;color:#f7d89e}
+.treasury-summary div span{display:block;font:12px system-ui;color:#d0b99a;margin-top:5px}
+.treasury-summary>strong{font-size:24px;color:#e8bb78}
+.treasury-progress{height:8px;border-radius:10px;background:#1b1511;margin:10px 0 20px;overflow:hidden}
+.treasury-progress>div{height:100%;width:0;background:#d6a15d;transition:width .3s}
+.treasury-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.treasury-filters{display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin}
+.treasury-app .treasury-filters button{padding:9px 10px;white-space:nowrap;font:13px system-ui;min-width:39px}
+.treasury-app .treasury-refresh{padding:3px 13px;font-size:22px}
+.treasury-app .treasury-refresh:disabled{opacity:.5}
+.treasury-notice{font:12px/1.5 system-ui;color:#d8bb8e;text-align:center;margin:15px 0}
+.treasury-shelf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 10px;padding:17px 10px 35px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 205px,#130c09 205px,#8b5b35 213px,#4d2f20 224px,#23140f 230px);border:8px solid #563822;border-radius:14px;box-shadow:inset 0 0 25px #140c08,0 12px 30px #0f0b09;min-height:210px}
+.treasury-shelf[hidden]{display:none}
+.treasury-app .treasury-artifact{position:relative;padding:0;min-width:0;border:0;background:transparent;color:inherit;cursor:pointer}
+.treasury-art{aspect-ratio:2/3;width:100%;border:4px solid var(--accent,#a6a3a0);border-radius:8px;background:linear-gradient(140deg,#eadcb8,#b79e77);box-shadow:0 4px 9px #140d0b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#463323;padding:7px;overflow:hidden}
+.treasury-art img{width:100%;height:100%;object-fit:contain}
+.treasury-symbol{font-size:clamp(25px,7vw,50px)}
+.treasury-art-name{font:bold clamp(10px,2.5vw,15px) Georgia;text-align:center;overflow-wrap:anywhere}
+.treasury-count{position:absolute;right:-5px;top:-7px;background:#f2d08a;color:#2b1b12;border:2px solid #6d4727;border-radius:20px;font:bold 12px system-ui;padding:4px 6px}
+.treasury-number{font:11px system-ui;text-align:center;margin-top:6px;color:#ddc39c}
+.treasury-empty{text-align:center;line-height:1.7;color:#e8d1aa;padding:25px}
+.treasury-empty[hidden]{display:none}
+.treasury-app .treasury-artifact:focus-visible,.treasury-app .treasury-mode:focus-visible,.treasury-app .treasury-filters button:focus-visible{outline:3px solid #f5d28e;outline-offset:3px}
+#treasuryDialog{font-family:Georgia,'Times New Roman',serif;border:1px solid #b18a52;border-radius:14px;background:#2d211a;color:#f5e2bf;max-width:min(96vw,720px);width:min(96vw,720px);max-height:96vh;max-height:96dvh;overflow:auto;padding:10px;box-shadow:0 20px 60px #0009}
+#treasuryDialog::backdrop{background:#000c}
+.treasury-dialog-content{position:relative;text-align:center;padding:28px 11px 5px}
+#treasuryBigCard .treasury-art{aspect-ratio:2/3;width:min(100%,56vh,560px);width:min(100%,56dvh,560px);max-height:none;margin:0 auto;min-width:0}
+#treasuryBigCard .treasury-art img{display:block;max-height:78vh;max-height:78dvh;object-fit:contain}
+#treasuryBigCard .treasury-art-name{font-size:19px}
+#treasuryBigCard .treasury-symbol{font-size:75px}
+#treasuryDialog .treasury-dialog-close{position:absolute;right:1px;top:0;width:41px;height:41px;background:transparent;border:0;color:#fff;font-size:32px;line-height:1;padding:0;margin:0;cursor:pointer;z-index:1}
+#treasuryQuantity{font:13px system-ui;color:#e8d1aa;margin:12px 0 0}
+@media(min-width:700px){.treasury-shelf{grid-template-columns:repeat(4,minmax(0,1fr));gap:26px 20px;background-size:auto 275px}.treasury-art-name{font-size:15px}}
+@media(max-width:580px){.treasury-app{padding:18px 10px 25px}.treasury-shelf{gap:20px 7px;padding:13px 7px 25px;border-width:6px}.treasury-app .treasury-filters button{padding:7px 8px;min-width:35px}.treasury-app .treasury-mode{padding:12px 4px;font-size:12px}.treasury-art{border-width:3px}}
+@media(prefers-reduced-motion:reduce){.treasury-progress>div{transition:none}}

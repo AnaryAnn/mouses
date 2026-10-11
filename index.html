@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f6f1e8">
   <title>Сычиная охота</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="treasury.css">
 </head>
 <body>
 <div id="login" class="screen">
@@ -33,6 +34,7 @@
   <nav class="tabs">
     <button class="tab active" data-tab="entry">Внести данные</button>
     <button class="tab" data-tab="stats">Статистика</button>
+    <button class="tab" data-tab="treasury">Сокровищница</button>
     <button class="tab" data-tab="settings">Настройки</button>
   </nav>
 
@@ -84,6 +86,52 @@
     <div id="statsContent"></div>
   </section>
 
+  <section id="treasury" class="panel" aria-label="Сокровищница артефактов">
+    <div class="treasury-app" id="owlTreasury">
+      <div class="treasury-head">
+        <span class="treasury-eyebrow">СОВИНАЯ АКАДЕМИЯ</span>
+        <h2>Сокровищница</h2>
+        <p>Коллекция магических артефактов</p>
+      </div>
+
+      <div class="treasury-mode-switch" role="group" aria-label="Выбор сокровищницы">
+        <button type="button" class="treasury-mode active" data-tmode="mine" aria-pressed="true">Личная сокровищница</button>
+        <button type="button" class="treasury-mode" data-tmode="all" aria-pressed="false">Общая сокровищница</button>
+      </div>
+
+      <div id="treasuryPersonBox" class="treasury-person-box">
+        <label for="treasuryPersonSearch">Чья сокровищница?</label>
+        <div class="treasury-person-combo">
+          <input type="text" id="treasuryPersonSearch" placeholder="Поиск по имени или фамилии..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="treasuryPersonList" aria-autocomplete="list">
+          <div id="treasuryPersonList" class="treasury-person-list" role="listbox" hidden></div>
+        </div>
+        <p id="treasuryPersonHint" class="treasury-person-hint">Выберите участника, чтобы увидеть его артефакты.</p>
+      </div>
+
+      <div class="treasury-summary">
+        <div><strong id="treasuryCounter">0 из 200</strong><span>Уникальных артефактов</span></div>
+        <strong id="treasuryPercent">0%</strong>
+      </div>
+      <div class="treasury-progress" aria-hidden="true"><div id="treasuryProgress"></div></div>
+
+      <div class="treasury-toolbar">
+        <div id="treasuryFilters" class="treasury-filters" role="group" aria-label="Фильтр по редкости">
+          <button type="button" class="selected" data-trarity="all" title="Все редкости" aria-label="Все редкости">Все</button>
+          <button type="button" data-trarity="обычный" title="Обычные" aria-label="Обычные">⚪</button>
+          <button type="button" data-trarity="необычный" title="Необычные" aria-label="Необычные">🟢</button>
+          <button type="button" data-trarity="редкий" title="Редкие" aria-label="Редкие">🔵</button>
+          <button type="button" data-trarity="эпический" title="Эпические" aria-label="Эпические">🟣</button>
+          <button type="button" data-trarity="легендарный" title="Легендарные" aria-label="Легендарные">🟡</button>
+        </div>
+        <button type="button" id="treasuryRefresh" class="treasury-refresh" aria-label="Обновить коллекцию" title="Обновить">↻</button>
+      </div>
+
+      <p class="treasury-notice" id="treasuryNotice" role="status">Нажмите на вкладку, чтобы загрузить находки.</p>
+      <div class="treasury-shelf" id="treasuryShelf" aria-label="Найденные артефакты"></div>
+      <p class="treasury-empty" id="treasuryEmpty" hidden></p>
+    </div>
+  </section>
+
   <section id="settings" class="panel">
     <div class="card">
       <h2>Настройки</h2>
@@ -110,7 +158,14 @@
 
   <footer>Данные хранятся в Google Sheets</footer>
 </main>
-
+<dialog id="treasuryDialog" aria-label="Карточка артефакта">
+  <div class="treasury-dialog-content">
+    <button type="button" id="treasuryClose" aria-label="Закрыть" class="treasury-dialog-close">×</button>
+    <div id="treasuryBigCard"></div>
+    <p id="treasuryQuantity"></p>
+  </div>
+</dialog>
 <script src="app.js"></script>
+<script src="treasury.js"></script>
 </body>
 </html>

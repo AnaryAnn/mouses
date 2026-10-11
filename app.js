@@ -315,6 +315,7 @@ $$(".tab").forEach(btn => {
     $("#" + btn.dataset.tab).classList.add("active");
 
     if (btn.dataset.tab === "stats") await loadStats();
+    if (btn.dataset.tab === "treasury" && window.owlsOpenTreasury) await window.owlsOpenTreasury();
     if (btn.dataset.tab === "settings") {
       if (!isAdminSession()) return;
       await loadSettings();
