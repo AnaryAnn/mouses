@@ -7,6 +7,24 @@ const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 let selectedName = "";
 
+// Кэш только для чтения. Запись плана и факта всегда идёт напрямую в API.
+const CACHE_PREFIX = 'owl_site_cache_v1_';
+function readCache(key) {
+  try { return JSON.parse(localStorage.getItem(CACHE_PREFIX + key) || 'null'); }
+  catch { return null; }
+}
+function writeCache(key, data) {
+  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({time: Date.now(), data})); }
+  catch (e) { console.warn('Кэш не сохранился:', e); }
+}
+function clearSiteCache() {
+  Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX)).forEach(k => localStorage.removeItem(k));
+}
+function cacheTime(time) {
+  return new Date(time).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+}
+
+
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
@@ -102,6 +120,7 @@ function openApp() {
 }
 
 function logout() {
+  clearSiteCache();
   clearSession();
   location.reload();
 }
@@ -155,8 +174,14 @@ async function apiPost(payload) {
 
 async function loadParticipants() {
   try {
+    const saved = readCache('participants');
+    if (saved?.data?.success && Array.isArray(saved.data.people)) {
+      PEOPLE = saved.data.people;
+      return;
+    }
     const data = await apiGet({action:"participants"});
     PEOPLE = data.success && Array.isArray(data.people) ? data.people : [];
+    if (data.success && Array.isArray(data.people)) writeCache('participants', data);
   } catch (e) {
     console.error("Не удалось загрузить список участников", e);
     PEOPLE = [];
@@ -180,6 +205,7 @@ $("#loginForm").addEventListener("submit", async e => {
       throw new Error("Неверный пароль");
     }
 
+    if (getPassword() !== password) clearSiteCache();
     saveSession(password, Boolean(data.isAdmin));
     openApp();
     await loadParticipants();
@@ -295,6 +321,7 @@ $("#save").addEventListener("click", async () => {
 
     if (!data.success) throw new Error(data.error || "Ошибка");
 
+    localStorage.removeItem(CACHE_PREFIX + 'stats');
     showMessage("#message","✓ Данные сохранены");
     $("#loadHint").textContent =
       "Актуальная запись за неделю обновлена.";
@@ -365,6 +392,7 @@ $("#saveGoal").addEventListener("click", async () => {
 
     if (!data.success) throw new Error(data.error || "Ошибка");
 
+    localStorage.removeItem(CACHE_PREFIX + 'stats');
     showMessage(
       "#settingsMessage",
       "✓ Командная цель сохранена"
@@ -389,22 +417,38 @@ function showMessage(selector,text,error=false) {
   if (error) el.classList.add("bad");
 }
 
-async function loadStats() {
-  $("#currentStats").innerHTML =
-    '<div class="card">Загружаю...</div>';
-  $("#statsContent").innerHTML = "";
-
+async function loadStats(force = false) {
+  const btn = $("#statsRefresh");
+  const status = $("#statsCacheStatus");
+  const cached = readCache('stats');
+  if (!force && cached?.data?.success) {
+    renderStats(cached.data);
+    status.textContent = `Сохранённые данные от ${cacheTime(cached.time)}`;
+    return;
+  }
+  if (!cached) {
+    $("#currentStats").innerHTML = '<div class="card">Загружаю...</div>';
+    $("#statsContent").innerHTML = "";
+  }
+  btn.disabled = true;
+  status.textContent = 'Обновляем данные...';
   try {
     const data = await apiGet({action:"stats"});
-
     if (!data.success) throw new Error(data.error || "Ошибка");
-
+    writeCache('stats', data);
     renderStats(data);
+    status.textContent = `Обновлено ${cacheTime(Date.now())}`;
   } catch(err) {
-    $("#currentStats").innerHTML =
-      '<div class="card error-box">Не удалось загрузить статистику</div>';
-  }
+    if (cached?.data?.success) {
+      renderStats(cached.data);
+      status.textContent = `Ошибка обновления. Показаны данные от ${cacheTime(cached.time)}`;
+    } else {
+      $("#currentStats").innerHTML = '<div class="card error-box">Не удалось загрузить статистику</div>';
+      status.textContent = 'Ошибка загрузки';
+    }
+  } finally { btn.disabled = false; }
 }
+$("#statsRefresh").addEventListener('click', () => loadStats(true));
 
 function renderStats(data) {
   const currentRecords = data.currentRecords || [];

@@ -8,6 +8,11 @@
   const $t = id => document.getElementById(id);
   const state = {started:false, people:[], selectedId:'', selectedLabel:'', mode:'mine', rarity:'all', all:[], mine:[], total:MAX_CARDS, globalLoaded:false, myLoaded:false, searchOpened:false, requestId:0};
 
+  const TREASURY_CACHE = 'owl_treasury_global_v1';
+  function globalCache() {
+    try { return JSON.parse(localStorage.getItem(TREASURY_CACHE) || 'null'); }
+    catch { return null; }
+  }
   function jsonp(action, params = {}) {
     return new Promise((resolve, reject) => {
       const callback = 'treasuryCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000);
@@ -170,7 +175,14 @@
       button.addEventListener('click',()=>showCard(item));shelf.append(button);
     });
   }
-  async function loadGlobal() {
+  async function loadGlobal(force=false) {
+    const saved = globalCache();
+    if (!force && saved?.data?.ok === true && Array.isArray(saved.data?.common?.cards)) {
+      state.total=Number(saved.data.total)||MAX_CARDS;
+      state.all=saved.data.common.cards;state.globalLoaded=true;
+      setNotice(`Сохранённая коллекция от ${new Date(saved.time).toLocaleString('ru-RU')}. Для обновления нажмите ↻`);
+      render();return;
+    }
     const request=++state.requestId;
     setBusy(true);setNotice('Загружаем общую сокровищницу...');
     try {
@@ -178,6 +190,7 @@
       if(request!==state.requestId) return;
       if(!data||data.ok!==true||!data.common||!Array.isArray(data.common.cards)) throw new Error('Неверный ответ API');
       state.total=Number(data.total)||MAX_CARDS;state.all=data.common.cards;state.globalLoaded=true;
+      try {localStorage.setItem(TREASURY_CACHE,JSON.stringify({time:Date.now(),data}));}catch(e){console.warn('Кэш сокровищницы:',e);}
       setNotice('Общая сокровищница обновлена.');render();
     }catch(err){if(request===state.requestId)setNotice(`Не удалось загрузить общую коллекцию: ${err.message}`);}
     finally {if(request===state.requestId)setBusy(false);}
@@ -200,7 +213,7 @@
     try {await loadPeople();}catch(err){setNotice(`Не удалось загрузить участников: ${err.message}`);}
     finally {setBusy(false);}
     if(state.mode==='mine') {if(state.selectedId)await loadPersonal(state.selectedId);else render();}
-    else await loadGlobal();
+    else await loadGlobal(true);
   }
   async function start() {
     if(!document.getElementById('owlTreasury')) return;
