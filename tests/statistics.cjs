@@ -97,7 +97,7 @@ function cache(age = 0, payload = data) {
   assert.equal(calls.length, 1, 'CSV обновляет просроченный кеш');
 
   reset(); cache();
-  run('selectedName = "Тест"; apiPost = async () => ({success: true})');
+  run('selectedName = "Тест"; apiPost = async () => ({success: true}); submitWebsiteReport = async () => ({success: true})');
   run('$("#plan").value = "30"; $("#fact").value = "17"');
   await elements.get('#save').click();
   assert.equal(storage.getItem(key), null, 'Сохранение записи сбрасывает кеш статистики');
