@@ -1,5 +1,10 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbzibdFoJJFpPAGdGtav5XOShS4_NKVUt9f8tYbSqYYkxDi5tFcRbZHBJy0IW2dRYJQj/exec";
 
+const STATS_API_URL = "https://owlet-vk-bot.onrender.com/api/website/stats";
+const STATS_CACHE_KEY = 'stats_python_v1';
+const STATS_CACHE_TTL = 5 * 60 * 1000;
+let statsRequest = null;
+
 let PEOPLE = [];
 
 const SESSION_DAYS = 7;
@@ -321,7 +326,7 @@ $("#save").addEventListener("click", async () => {
 
     if (!data.success) throw new Error(data.error || "Ошибка");
 
-    localStorage.removeItem(CACHE_PREFIX + 'stats');
+    localStorage.removeItem(CACHE_PREFIX + STATS_CACHE_KEY);
     showMessage("#message","✓ Данные сохранены");
     $("#loadHint").textContent =
       "Актуальная запись за неделю обновлена.";
@@ -392,7 +397,7 @@ $("#saveGoal").addEventListener("click", async () => {
 
     if (!data.success) throw new Error(data.error || "Ошибка");
 
-    localStorage.removeItem(CACHE_PREFIX + 'stats');
+    localStorage.removeItem(CACHE_PREFIX + STATS_CACHE_KEY);
     showMessage(
       "#settingsMessage",
       "✓ Командная цель сохранена"
@@ -417,11 +422,93 @@ function showMessage(selector,text,error=false) {
   if (error) el.classList.add("bad");
 }
 
+
+function statsWeekStart() {
+  // Неделя API начинается во вторник по московскому времени.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date());
+  const part = type => parts.find(p => p.type === type).value;
+  const date = new Date(Date.UTC(+part('year'), +part('month') - 1, +part('day')));
+  date.setUTCDate(date.getUTCDate() - (date.getUTCDay() - 2 + 7) % 7);
+  return date.toISOString().slice(0, 10);
+}
+
+function currentStatsCache() {
+  if (!getPassword()) return null;
+  const saved = readCache(STATS_CACHE_KEY);
+  return saved?.data?.success && Number.isFinite(saved.time)
+    && saved.time <= Date.now()
+    && saved.data.currentWeek?.start === statsWeekStart() ? saved : null;
+}
+
+async function fetchStats() {
+  const password = getPassword();
+  if (!password) {
+    const error = new Error("Сессия завершена");
+    error.unauthorized = true;
+    throw error;
+  }
+  if (statsRequest?.password === password) return statsRequest.promise;
+  const pending = {password};
+  pending.promise = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    try {
+      const bytes = new TextEncoder().encode(password);
+      const encoded = btoa(Array.from(bytes, b => String.fromCharCode(b)).join(""));
+      const response = await fetch(STATS_API_URL, {
+        headers: {"X-Website-Password": encoded},
+        cache: "no-store",
+        signal: controller.signal
+      });
+      if (getPassword() !== password) {
+        const error = new Error("Сессия завершена");
+        error.unauthorized = true;
+        throw error;
+      }
+      if (response.status === 401) {
+        clearSiteCache();
+        clearSession();
+        const error = new Error("Сессия завершена");
+        error.unauthorized = true;
+        location.reload();
+        throw error;
+      }
+      if (!response.ok) throw new Error("Ошибка соединения");
+      const data = await response.json();
+      if (!data.success || !data.currentWeek?.start
+          || !Array.isArray(data.currentRecords) || !Array.isArray(data.weeks)) {
+        throw new Error("Некорректный ответ статистики");
+      }
+      if (getPassword() !== password) {
+        const error = new Error("Сессия завершена");
+        error.unauthorized = true;
+        throw error;
+      }
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  })();
+  statsRequest = pending;
+  try { return await pending.promise; }
+  finally { if (statsRequest === pending) statsRequest = null; }
+}
+
+async function getStatsForExport() {
+  const cached = currentStatsCache();
+  if (cached && Date.now() - cached.time < STATS_CACHE_TTL) return cached.data;
+  const data = await fetchStats();
+  writeCache(STATS_CACHE_KEY, data);
+  return data;
+}
+
 async function loadStats(force = false) {
   const btn = $("#statsRefresh");
   const status = $("#statsCacheStatus");
-  const cached = readCache('stats');
-  if (!force && cached?.data?.success) {
+  const cached = currentStatsCache();
+  if (!force && cached && Date.now() - cached.time < STATS_CACHE_TTL) {
     renderStats(cached.data);
     status.textContent = `Сохранённые данные от ${cacheTime(cached.time)}`;
     return;
@@ -433,13 +520,17 @@ async function loadStats(force = false) {
   btn.disabled = true;
   status.textContent = 'Обновляем данные...';
   try {
-    const data = await apiGet({action:"stats"});
+    const data = await fetchStats();
     if (!data.success) throw new Error(data.error || "Ошибка");
-    writeCache('stats', data);
+    writeCache(STATS_CACHE_KEY, data);
     renderStats(data);
     status.textContent = `Обновлено ${cacheTime(Date.now())}`;
   } catch(err) {
-    if (cached?.data?.success) {
+    if (err.unauthorized) {
+      $("#currentStats").innerHTML = "";
+      $("#statsContent").innerHTML = "";
+      status.textContent = 'Сессия завершена';
+    } else if (cached?.data?.success) {
       renderStats(cached.data);
       status.textContent = `Ошибка обновления. Показаны данные от ${cacheTime(cached.time)}`;
     } else {
@@ -578,7 +669,7 @@ function renderStats(data) {
 
 $("#download").addEventListener("click", async () => {
   try {
-    const data = await apiGet({action:"stats"});
+    const data = await getStatsForExport();
 
     const rows = [[
       "Неделя с","Неделя по","Цель",
@@ -648,3 +739,4 @@ async function restoreSession() {
 }
 
 restoreSession();
+
