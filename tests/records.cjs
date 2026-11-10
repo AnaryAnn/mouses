@@ -12,7 +12,7 @@ const storage = {
 };
 let calls = [], response, reloads = 0;
 const ctx = vm.createContext({
-  Date, Intl, URL, crypto, TextEncoder, AbortController, setTimeout, clearTimeout, console,
+  Date, Intl, URL, URLSearchParams, crypto, TextEncoder, AbortController, setTimeout, clearTimeout, console,
   btoa: s => Buffer.from(s, 'binary').toString('base64'),
   localStorage: storage, location: {reload() { reloads++; }},
   document: {querySelector: () => ({addEventListener() {}}),
@@ -74,5 +74,14 @@ function reply(data, status = 200) {
   assert.equal(storage.getItem('owl_password'), null); assert.equal(reloads, 1);
   assert.ok(calls.every(c => c.url.startsWith('https://owlet-vk-bot.onrender.com/')),
     'Внесение и чтение формы не обращаются к Apps Script');
+  reply({success: true, isAdmin: true});
+  const login = await run('rawGet({action:"login"}, "админ")');
+  assert.equal(login.isAdmin, true);
+  assert.equal(calls.at(-1).url, 'https://owlet-vk-bot.onrender.com/api/website/login');
+  assert.ok(!calls.at(-1).url.includes('админ'));
+  reply({success:false, unauthorized:true, error:'Неверный пароль'},401);
+  const before = reloads;
+  await assert.rejects(run('rawGet({action:"login"}, "ошибка")'), /Неверный пароль/);
+  assert.equal(reloads,before,'Неверный пароль входа не перезагружает форму');
   console.log('Запись сайта: прямой API, UTF-8, потерянный ответ, повтор requestId, предупреждения и 401 — OK');
 })().catch(e => {console.error(e); process.exitCode = 1;});

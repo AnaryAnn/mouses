@@ -1,4 +1,3 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbzibdFoJJFpPAGdGtav5XOShS4_NKVUt9f8tYbSqYYkxDi5tFcRbZHBJy0IW2dRYJQj/exec";
 
 const STATS_API_URL = "https://owlet-vk-bot.onrender.com/api/website/stats";
 const WEBSITE_API_BASE = "https://owlet-vk-bot.onrender.com/api/website";
@@ -135,15 +134,12 @@ function logout() {
 }
 
 async function rawGet(params={}, password=getPassword()) {
-  const u = new URL(API_URL);
-
-  Object.entries({...params, password})
-    .forEach(([k,v]) => u.searchParams.set(k,v));
-
-  const r = await fetch(u, {cache:"no-store"});
-  if (!r.ok) throw new Error("Ошибка соединения");
-
-  return r.json();
+  const {action, ...query} = params;
+  const paths = {login:'/login', participants:'/participants', current:'/current',
+                 settings:'/settings', stats:'/stats'};
+  if (!paths[action]) throw new Error("Неизвестное действие");
+  const suffix = new URLSearchParams(query).toString();
+  return websiteRequest(paths[action] + (suffix ? '?' + suffix : ''), undefined, password);
 }
 
 async function apiGet(params={}) {
@@ -159,30 +155,12 @@ async function apiGet(params={}) {
 }
 
 async function apiPost(payload) {
-  const r = await fetch(API_URL, {
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify({
-      ...payload,
-      password:getPassword()
-    })
-  });
-
-  if (!r.ok) throw new Error("Ошибка соединения");
-
-  const data = await r.json();
-
-  if (data.unauthorized) {
-    clearSession();
-    location.reload();
-    throw new Error("Сессия завершена");
-  }
-
-  return data;
+  if (payload.action !== 'saveGoal') throw new Error("Неизвестное действие");
+  return websiteRequest('/settings', {goal:payload.goal});
 }
 
-async function websiteRequest(path, payload) {
-  const password = getPassword();
+async function websiteRequest(path, payload, password=getPassword()) {
+  const isLogin = path === "/login";
   if (!password) throw new Error("Сессия завершена");
   const bytes = new TextEncoder().encode(password);
   const encoded = btoa(Array.from(bytes, b => String.fromCharCode(b)).join(""));
@@ -197,13 +175,13 @@ async function websiteRequest(path, payload) {
       body: payload ? JSON.stringify(payload) : undefined,
       cache: 'no-store', signal: controller.signal
     });
-    if (getPassword() !== password) throw new Error("Сессия завершена");
-    if (response.status === 401) {
+    if (!isLogin && getPassword() !== password) throw new Error("Сессия завершена");
+    if (response.status === 401 && !isLogin) {
       clearSiteCache(); clearSession(); location.reload();
       throw new Error("Сессия завершена");
     }
     const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.error || "Не удалось подтвердить операцию");
+    if (!response.ok || !(data.success || data.ok)) throw new Error(data.error || "Не удалось подтвердить операцию");
     return data;
   } finally { clearTimeout(timer); }
 }

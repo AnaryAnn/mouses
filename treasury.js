@@ -1,7 +1,6 @@
 /* Сокровищница: отдельный интерфейс. Не вмешивается в регистрацию мышей и пароли. */
 (() => {
   'use strict';
-  const TREASURY_API = 'https://script.google.com/macros/s/AKfycbwiCpPxUFHZbnixMqbbBLZLPdTMaqhj-DJXScrfrNF6iQYOhiRKiBE4wmCrM6l8PwbrSQ/exec';
   const CLOUDINARY_PREFIX = 'https://res.cloudinary.com/jlcfrihy/image/upload/';
   const MAX_CARDS = 200;
   const COLORS = {'обычный':'#b6aaa0','необычный':'#5caa73','редкий':'#619bd7','эпический':'#a77cce','легендарный':'#e5b64d'};
@@ -13,30 +12,9 @@
     try { return JSON.parse(localStorage.getItem(TREASURY_CACHE) || 'null'); }
     catch { return null; }
   }
-  function jsonp(action, params = {}) {
-    return new Promise((resolve, reject) => {
-      const callback = 'treasuryCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000);
-      const script = document.createElement('script');
-      let completed = false;
-      const timer = setTimeout(() => finish(new Error('Превышено время ожидания ответа')), 20000);
-      function finish(err, result) {
-        if (completed) return;
-        completed = true;
-        clearTimeout(timer);
-        delete window[callback];
-        script.remove();
-        if (err) reject(err); else resolve(result);
-      }
-      window[callback] = data => finish(null, data);
-      script.onerror = () => finish(new Error('Нет связи с сервером сокровищницы'));
-      const url = new URL(TREASURY_API);
-      url.searchParams.set('action', action);
-      Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)));
-      url.searchParams.set('callback', callback);
-      url.searchParams.set('_', String(Date.now()));
-      script.src = url.toString();
-      document.head.append(script);
-    });
+  async function treasuryGet(action, params = {}) {
+    const query = new URLSearchParams({action, ...params});
+    return websiteRequest('/treasury?' + query.toString());
   }
 
   function setNotice(message) { $t('treasuryNotice').textContent = message; }
@@ -100,7 +78,7 @@
     loadPersonal(person.vkId);
   }
   async function loadPeople() {
-    const response = await jsonp('participants');
+    const response = await treasuryGet('participants');
     if (!response || response.ok !== true || !Array.isArray(response.participants)) {
       throw new Error('API ещё не обновлён для списка участников');
     }
@@ -186,7 +164,7 @@
     const request=++state.requestId;
     setBusy(true);setNotice('Загружаем общую сокровищницу...');
     try {
-      const data=await jsonp('collection',{vkId:'0'});
+      const data=await treasuryGet('collection',{vkId:'0'});
       if(request!==state.requestId) return;
       if(!data||data.ok!==true||!data.common||!Array.isArray(data.common.cards)) throw new Error('Неверный ответ API');
       state.total=Number(data.total)||MAX_CARDS;state.all=data.common.cards;state.globalLoaded=true;
@@ -199,7 +177,7 @@
     const request=++state.requestId;
     setBusy(true);setNotice(`Загружаем коллекцию: ${state.selectedLabel}...`);
     try {
-      const data=await jsonp('collection',{vkId});
+      const data=await treasuryGet('collection',{vkId});
       if(request!==state.requestId||vkId!==state.selectedId) return;
       if(!data||data.ok!==true||!data.personal||!Array.isArray(data.personal.cards)) throw new Error('Неверный ответ API');
       state.total=Number(data.total)||MAX_CARDS;state.mine=data.personal.cards;state.myLoaded=true;
@@ -255,3 +233,4 @@
   window.owlsOpenTreasury=start;
   render();
 })();
+
