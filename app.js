@@ -3,6 +3,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzibdFoJJFpPAGdGtav5XOS
 const STATS_API_URL = "https://owlet-vk-bot.onrender.com/api/website/stats";
 const STATS_CACHE_KEY = 'stats_python_v1';
 const STATS_CACHE_TTL = 5 * 60 * 1000;
+const PARTICIPANTS_CACHE_TTL = 5 * 60 * 1000;
 let statsRequest = null;
 
 let PEOPLE = [];
@@ -180,7 +181,9 @@ async function apiPost(payload) {
 async function loadParticipants() {
   try {
     const saved = readCache('participants');
-    if (saved?.data?.success && Array.isArray(saved.data.people)) {
+    if (saved?.data?.success && Array.isArray(saved.data.people)
+        && Number.isFinite(saved.time) && saved.time <= Date.now()
+        && Date.now() - saved.time < PARTICIPANTS_CACHE_TTL) {
       PEOPLE = saved.data.people;
       return;
     }
@@ -248,8 +251,10 @@ function renderPeople(query="") {
   });
 }
 
-$("#personSearch").addEventListener("focus", e => {
+$("#personSearch").addEventListener("focus", async e => {
   renderPeople(e.target.value);
+  await loadParticipants();
+  if (document.activeElement === e.target) renderPeople(e.target.value);
 });
 
 $("#personSearch").addEventListener("input", e => {
