@@ -1,6 +1,8 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbzibdFoJJFpPAGdGtav5XOShS4_NKVUt9f8tYbSqYYkxDi5tFcRbZHBJy0IW2dRYJQj/exec";
 
 const STATS_API_URL = "https://owlet-vk-bot.onrender.com/api/website/stats";
+const WEBSITE_API_BASE = "https://owlet-vk-bot.onrender.com/api/website";
+const PENDING_REPORT_KEY = 'owl_pending_report_v1';
 const STATS_CACHE_KEY = 'stats_python_v1';
 const STATS_CACHE_TTL = 5 * 60 * 1000;
 const PARTICIPANTS_CACHE_TTL = 5 * 60 * 1000;
@@ -126,6 +128,7 @@ function openApp() {
 }
 
 function logout() {
+  localStorage.removeItem(PENDING_REPORT_KEY);
   clearSiteCache();
   clearSession();
   location.reload();
@@ -178,6 +181,54 @@ async function apiPost(payload) {
   return data;
 }
 
+async function websiteRequest(path, payload) {
+  const password = getPassword();
+  if (!password) throw new Error("Сессия завершена");
+  const bytes = new TextEncoder().encode(password);
+  const encoded = btoa(Array.from(bytes, b => String.fromCharCode(b)).join(""));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(WEBSITE_API_BASE + path, {
+      method: payload ? 'POST' : 'GET',
+      headers: payload
+        ? {'X-Website-Password': encoded, 'Content-Type': 'application/json'}
+        : {'X-Website-Password': encoded},
+      body: payload ? JSON.stringify(payload) : undefined,
+      cache: 'no-store', signal: controller.signal
+    });
+    if (getPassword() !== password) throw new Error("Сессия завершена");
+    if (response.status === 401) {
+      clearSiteCache(); clearSession(); location.reload();
+      throw new Error("Сессия завершена");
+    }
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || "Не удалось подтвердить операцию");
+    return data;
+  } finally { clearTimeout(timer); }
+}
+
+async function submitWebsiteReport(payload) {
+  let pending;
+  try { pending = JSON.parse(localStorage.getItem(PENDING_REPORT_KEY) || 'null'); }
+  catch { pending = null; }
+  if (!pending || typeof pending.requestId !== 'string'
+      || !/^[a-zA-Z0-9_-]{16,100}$/.test(pending.requestId)
+      || pending.name !== payload.name || pending.plan !== payload.plan || pending.fact !== payload.fact) {
+    pending = {...payload, requestId: crypto.randomUUID()};
+    // Без сохранённого идентификатора нельзя безопасно повторить потерянный ответ.
+    localStorage.setItem(PENDING_REPORT_KEY, JSON.stringify(pending));
+  }
+  const data = await websiteRequest('/records', pending);
+  if (!data.warning && data.artifactStatus !== 'pending' && data.notificationStatus !== 'pending') {
+    // Другой вкладке мог уже понадобиться собственный повтор запроса.
+    if (localStorage.getItem(PENDING_REPORT_KEY) === JSON.stringify(pending)) {
+      localStorage.removeItem(PENDING_REPORT_KEY);
+    }
+  }
+  return data;
+}
+
 async function loadParticipants() {
   try {
     const saved = readCache('participants');
@@ -187,7 +238,7 @@ async function loadParticipants() {
       PEOPLE = saved.data.people;
       return;
     }
-    const data = await apiGet({action:"participants"});
+    const data = await websiteRequest('/participants');
     PEOPLE = data.success && Array.isArray(data.people) ? data.people : [];
     if (data.success && Array.isArray(data.people)) writeCache('participants', data);
   } catch (e) {
@@ -285,7 +336,7 @@ async function selectPerson(name) {
   $("#loadHint").textContent = "Загружаю текущие данные...";
 
   try {
-    const data = await apiGet({action:"current", name});
+    const data = await websiteRequest('/current?name=' + encodeURIComponent(name));
 
     if (!data.success) throw new Error(data.error || "Ошибка");
 
@@ -322,8 +373,7 @@ $("#save").addEventListener("click", async () => {
   btn.textContent = "Сохраняю...";
 
   try {
-    const data = await apiPost({
-      action:"saveRecord",
+    const data = await submitWebsiteReport({
       name:selectedName,
       plan:Number(plan),
       fact:Number(fact)
@@ -332,7 +382,10 @@ $("#save").addEventListener("click", async () => {
     if (!data.success) throw new Error(data.error || "Ошибка");
 
     localStorage.removeItem(CACHE_PREFIX + STATS_CACHE_KEY);
-    showMessage("#message","✓ Данные сохранены");
+    let savedMessage = "✓ Данные сохранены";
+    if (data.warning) savedMessage += ". " + data.warning;
+    else if (data.artifact?.dropped) savedMessage += ". ✨ Выпал артефакт: " + data.artifact.artifact.name;
+    showMessage("#message", savedMessage);
     $("#loadHint").textContent =
       "Актуальная запись за неделю обновлена.";
   } catch(err) {
