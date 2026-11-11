@@ -1,4 +1,6 @@
 [build]
+  # 0 — пропустить сборку, ненулевой код — продолжить.
+  ignore = 'test -n "$CACHED_COMMIT_REF" && test -n "$COMMIT_REF" && test "$CACHED_COMMIT_REF" != "$COMMIT_REF" && git diff --quiet "$CACHED_COMMIT_REF" "$COMMIT_REF" -- . ../netlify.toml'
   publish = "public"
   functions = "functions"
 
