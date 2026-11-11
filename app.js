@@ -832,22 +832,22 @@ function historyChart(weeks) {
   const grid = Array.from({length:5}, (_,i) => {
     const yy = bottom - i * (bottom-top)/4;
     return `<line x1="${left}" y1="${yy}" x2="${right}" y2="${yy}" stroke="#ddd8ce"/>
-      <text x="${left-8}" y="${yy+4}" text-anchor="end" font-size="11" fill="#47786c">${miceScale*i/4}</text>
-      <text x="${right+8}" y="${yy+4}" font-size="11" fill="#b15a38">${owletsScale*i/4}</text>`;
+      <text x="${left-8}" y="${yy+4}" text-anchor="end" font-size="11" fill="#47786c">${owletsScale*i/4}</text>
+      <text x="${right+8}" y="${yy+4}" font-size="11" fill="#b15a38">${miceScale*i/4}</text>`;
   }).join('');
   const bars = weeks.map((w,i) => {
-    const yy = y(w.totalMice, miceScale);
+    const yy = y(w.activeOwlets, owletsScale);
     const current = w.weekStart === historyData.currentWeek.start;
-    return `<g><title>${esc(fmtDate(w.weekStart))}: ${w.totalMice} мышей${current ? ', неделя идёт' : ''}</title>
+    return `<g><title>${esc(fmtDate(w.weekStart))}: ${w.activeOwlets} активных сычиков${current ? ', неделя идёт' : ''}</title>
       <rect x="${x(i)-16}" y="${yy}" width="32" height="${bottom-yy}" rx="3" fill="#47786c" opacity="${current ? '.5' : '.9'}"/>
-      <text x="${x(i)}" y="${Math.max(16, yy-7)}" text-anchor="middle" font-size="11" fill="#35594f">${w.totalMice}</text>
+      <text x="${x(i)}" y="${Math.max(16, yy-7)}" text-anchor="middle" font-size="11" fill="#35594f">${w.activeOwlets}</text>
       <text x="${x(i)}" y="225" text-anchor="middle" font-size="11" fill="currentColor">${esc(fmtDate(w.weekStart).slice(0,5))}${current ? '*' : ''}</text>
       <text x="${x(i)}" y="242" text-anchor="middle" font-size="10" fill="#777">${w.weekStart.slice(0,4)}</text></g>`;
   }).join('');
-  const points = weeks.map((w,i) => `${x(i)},${y(w.activeOwlets,owletsScale)}`).join(' ');
-  const dots = weeks.map((w,i) => `<circle cx="${x(i)}" cy="${y(w.activeOwlets,owletsScale)}" r="4" fill="#b15a38"><title>${esc(fmtDate(w.weekStart))}: ${w.activeOwlets} активных сычиков</title></circle>`).join('');
-  return `<p style="display:flex;gap:16px;flex-wrap:wrap;font-size:.9em"><span style="color:#47786c">▥ Мыши — левая шкала</span><span style="color:#b15a38">● Активные сычики — правая шкала</span></p>
-    <div style="overflow-x:auto"><svg role="img" aria-label="Мыши — столбцы, активные сычики — линия. Значения по двум шкалам" width="${width}" height="255" viewBox="0 0 ${width} 255" style="display:block;margin:auto">${grid}${bars}<polyline points="${points}" fill="none" stroke="#b15a38" stroke-width="3" stroke-linejoin="round"/>${dots}</svg></div>`;
+  const points = weeks.map((w,i) => `${x(i)},${y(w.totalMice,miceScale)}`).join(' ');
+  const dots = weeks.map((w,i) => `<circle cx="${x(i)}" cy="${y(w.totalMice,miceScale)}" r="4" fill="#b15a38"><title>${esc(fmtDate(w.weekStart))}: ${w.totalMice} мышей</title></circle>`).join('');
+  return `<p style="display:flex;gap:16px;flex-wrap:wrap;font-size:.9em"><span style="color:#47786c">▥ Активные сычики — левая шкала</span><span style="color:#b15a38">● Мыши — правая шкала</span></p>
+    <div style="overflow-x:auto"><svg role="img" aria-label="Активные сычики — столбцы, мыши — линия. Значения по двум шкалам" width="${width}" height="255" viewBox="0 0 ${width} 255" style="display:block;margin:auto">${grid}${bars}<polyline points="${points}" fill="none" stroke="#b15a38" stroke-width="3" stroke-linejoin="round"/>${dots}</svg></div>`;
 }
 
 function renderStatsHistory(host) {

@@ -58,7 +58,7 @@ assert.equal(elements.get('#historyPanel').hidden, false);
 assert.equal(elements.get('#historyToggle')['aria-expanded'], 'true');
 elements.get('#historyToggle').click();
 assert.equal(elements.get('#historyPanel').hidden, true);
-assert.match(elements.get('#statsHistory').innerHTML, /Мыши — левая шкала/);
+assert.match(elements.get('#statsHistory').innerHTML, /Активные сычики — левая шкала/);
 assert.match(elements.get('#statsHistory').innerHTML, /Активные сычики/);
 elements.get('#historyWeek').change({target:{value:'2026-11-03'}});
 assert.match(elements.get('#statsHistory').innerHTML, /&lt;Сыч&gt;/);
