@@ -22,6 +22,8 @@ test('прокси: CORS, фиксированный адрес, пароль, �
     assert.equal(new TextDecoder().decode(calls[0].options.body),'{"requestId":"same-id"}');
     await proxy(request('/api/treasury?action=collection&vkId=0'));
     assert.equal(calls.at(-1).url,'https://owlet-vk-bot.onrender.com/api/treasury?action=collection&vkId=0');
+    await proxy(request('/api/website/treasury?action=collection'));
+    assert.equal(calls.at(-1).url,'https://owlet-vk-bot.onrender.com/api/website/treasury?action=collection');
     await proxy(request('/health'));
     assert.equal(calls.at(-1).url,'https://owlet-vk-bot.onrender.com/');
     const count = calls.length;

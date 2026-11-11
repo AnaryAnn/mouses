@@ -2,7 +2,7 @@
 const UPSTREAM = 'https://owlet-vk-bot.onrender.com';
 const SITE = 'https://anaryann.github.io';
 const ROUTES = new Set(['login', 'participants', 'current', 'settings', 'stats',
-  'history', 'records', 'preflight'].map(name => '/api/website/' + name));
+  'history', 'records', 'preflight', 'treasury', 'bonus'].map(name => '/api/website/' + name));
 
 export const config = {path: ['/health', '/api/website/*', '/api/treasury']};
 
