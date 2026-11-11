@@ -27,6 +27,7 @@ const ctx = vm.createContext({
       if (!elements.has(selector)) elements.set(selector, {
         textContent: '', innerHTML: '', disabled: false,
         classList: {add() {}, remove() {}, toggle() {}},
+        setAttribute(name, value) { this[name] = value; },
         addEventListener(event, fn) { this[event] = fn; }
       });
       return elements.get(selector);
@@ -47,8 +48,17 @@ const weeks = [
 ];
 ctx.fixture = {success:true,currentWeek:{start:'2026-11-10'},weeks};
 run('historyData = fixture; renderStatsHistory(document.querySelector("#statsHistory"))');
-assert.match(elements.get('#statsHistory').innerHTML, /идёт сейчас/);
-assert.match(elements.get('#statsHistory').innerHTML, /Сумма мышей/);
+assert.equal((elements.get('#statsHistory').innerHTML.match(/<svg /g)||[]).length, 1);
+assert.match(elements.get('#statsHistory').innerHTML, /<polyline /);
+assert.match(elements.get('#statsHistory').innerHTML, /id="historyPanel" hidden/);
+assert.doesNotMatch(elements.get('#statsHistory').innerHTML, /<option value="2026-11-10"/);
+assert.match(elements.get('#statsHistory').innerHTML, /<option value="2026-11-03"/);
+elements.get('#historyToggle').click();
+assert.equal(elements.get('#historyPanel').hidden, false);
+assert.equal(elements.get('#historyToggle')['aria-expanded'], 'true');
+elements.get('#historyToggle').click();
+assert.equal(elements.get('#historyPanel').hidden, true);
+assert.match(elements.get('#statsHistory').innerHTML, /Мыши — левая шкала/);
 assert.match(elements.get('#statsHistory').innerHTML, /Активные сычики/);
 elements.get('#historyWeek').change({target:{value:'2026-11-03'}});
 assert.match(elements.get('#statsHistory').innerHTML, /&lt;Сыч&gt;/);
@@ -65,5 +75,7 @@ response = {ok:true,status:200,json:async()=>ctx.fixture};
  now += 300001;
  await run('loadStatsHistory()');
  assert.equal(calls.length, 3);
+ run('historyData = {...fixture, weeks:[fixture.weeks[1]]}; renderStatsHistory(document.querySelector("#statsHistory"))');
+ assert.match(elements.get('#statsHistory').innerHTML, /Прошедших недель пока нет/);
  console.log('История: выбор недели, экранирование, графики, кеш 5 минут и обновление — OK');
 })().catch(e => {console.error(e);process.exitCode=1;});
