@@ -37,7 +37,7 @@ function reply(data, status = 200) {
   await assert.rejects(run('submitWebsiteReport(payload)'));
   const pending = JSON.parse(storage.getItem(key));
   assert.equal(pending.name, 'Тест'); assert.ok(pending.requestId);
-  assert.equal(calls[0].url, 'https://owlet-vk-bot.onrender.com/api/website/records');
+  assert.equal(calls[0].url, 'https://dynamic-cactus-a79224.netlify.app/api/website/records');
   assert.equal(calls[0].options.method, 'POST');
   assert.equal(calls[0].options.headers['Content-Type'], 'application/json');
   assert.equal(Buffer.from(calls[0].options.headers['X-Website-Password'], 'base64').toString(), 'пароль🦉');
@@ -72,12 +72,12 @@ function reply(data, status = 200) {
   reply({success: false, unauthorized: true}, 401);
   await assert.rejects(run('websiteRequest("/participants")'), /Сессия завершена/);
   assert.equal(storage.getItem('owl_password'), null); assert.equal(reloads, 1);
-  assert.ok(calls.every(c => c.url.startsWith('https://owlet-vk-bot.onrender.com/')),
+  assert.ok(calls.every(c => c.url.startsWith('https://dynamic-cactus-a79224.netlify.app/')),
     'Внесение и чтение формы не обращаются к Apps Script');
   reply({success: true, isAdmin: true});
   const login = await run('rawGet({action:"login"}, "админ")');
   assert.equal(login.isAdmin, true);
-  assert.equal(calls.at(-1).url, 'https://owlet-vk-bot.onrender.com/api/website/login');
+  assert.equal(calls.at(-1).url, 'https://dynamic-cactus-a79224.netlify.app/api/website/login');
   assert.ok(!calls.at(-1).url.includes('админ'));
   reply({success:false, unauthorized:true, error:'Неверный пароль'},401);
   const before = reloads;

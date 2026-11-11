@@ -61,7 +61,7 @@ function cache(age = 0, payload = data) {
   reset();
   await run('loadStats()');
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://owlet-vk-bot.onrender.com/api/website/stats');
+  assert.equal(calls[0].url, 'https://dynamic-cactus-a79224.netlify.app/api/website/stats');
   assert.equal(Buffer.from(calls[0].options.headers['X-Website-Password'], 'base64').toString(), 'пароль🦉');
   assert.equal(calls[0].options.cache, 'no-store');
   assert.ok(values.has(key));

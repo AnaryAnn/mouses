@@ -1,6 +1,6 @@
 
-const STATS_API_URL = "https://owlet-vk-bot.onrender.com/api/website/stats";
-const WEBSITE_API_BASE = "https://owlet-vk-bot.onrender.com/api/website";
+const STATS_API_URL = "https://dynamic-cactus-a79224.netlify.app/api/website/stats";
+const WEBSITE_API_BASE = "https://dynamic-cactus-a79224.netlify.app/api/website";
 const PENDING_REPORT_KEY = 'owl_pending_report_v1';
 const STATS_CACHE_KEY = 'stats_python_v1';
 const STATS_CACHE_TTL = 5 * 60 * 1000;
