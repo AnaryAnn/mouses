@@ -578,6 +578,7 @@ async function loadStats(force = false) {
 $("#statsRefresh").addEventListener('click', () => loadStats(true));
 
 function renderStats(data) {
+  loadStatsHistory();
   const currentRecords = data.currentRecords || [];
 
   const plan = currentRecords.reduce(
@@ -776,3 +777,82 @@ async function restoreSession() {
 
 restoreSession();
 
+
+
+let historyData = null;
+let historyPending = null;
+let historySelection = '';
+const HISTORY_CACHE_KEY = 'stats_history_v1';
+
+async function loadStatsHistory(force = false) {
+  let host = $('#statsHistory');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'statsHistory';
+    $('#statsContent').after(host);
+  }
+  if (historyPending) return historyPending;
+  const password = getPassword();
+  const cached = readCache(HISTORY_CACHE_KEY);
+  if (!force && cached?.data?.success && cached.data.currentWeek?.start === statsWeekStart()
+      && Date.now() >= cached.time && Date.now() - cached.time < STATS_CACHE_TTL) {
+    historyData = cached.data;
+    renderStatsHistory(host);
+    return;
+  }
+  host.innerHTML = '<div class="card">Загружаю историю недель…</div>';
+  historyPending = (async () => {
+    try {
+      const data = await websiteRequest('/history');
+      if (password !== getPassword()) return;
+      if (!Array.isArray(data.weeks)) throw new Error('Некорректная история');
+      historyData = data;
+      writeCache(HISTORY_CACHE_KEY, data);
+      renderStatsHistory(host);
+    } catch (error) {
+      if (password !== getPassword()) return;
+      host.innerHTML = '<div class="card">Не удалось загрузить историю. <button type="button" id="historyRetry">Повторить</button></div>';
+      $('#historyRetry').addEventListener('click', () => loadStatsHistory(true));
+    } finally { historyPending = null; }
+  })();
+  return historyPending;
+}
+
+function historyChart(weeks, field, title, color) {
+  const width = Math.max(320, weeks.length * 64);
+  const max = Math.max(1, ...weeks.map(w => Number(w[field] || 0)));
+  const bars = weeks.map((w, i) => {
+    const value = Number(w[field] || 0);
+    const h = value / max * 110;
+    const x = 22 + i * 64;
+    return `<g><title>${esc(fmtDate(w.weekStart))}: ${value}</title>
+      <rect x="${x}" y="${140-h}" width="36" height="${h}" rx="3" fill="${color}"/>
+      <text x="${x+18}" y="${132-h}" text-anchor="middle" font-size="12" fill="currentColor">${value}</text>
+      <text x="${x+18}" y="160" text-anchor="middle" font-size="11" fill="currentColor">${esc(fmtDate(w.weekStart).slice(0,5))}</text></g>`;
+  }).join('');
+  return `<h4>${title}</h4><div style="overflow-x:auto"><svg role="img" aria-label="${title}. Точные значения приведены в таблице ниже" width="${width}" height="180" viewBox="0 0 ${width} 180">${bars}</svg></div>`;
+}
+
+function renderStatsHistory(host) {
+  const weeks = [...historyData.weeks].sort((a,b) => a.weekStart.localeCompare(b.weekStart));
+  if (!weeks.length) { host.innerHTML = '<div class="card">Истории пока нет.</div>'; return; }
+  if (!weeks.some(w => w.weekStart === historySelection)) historySelection = weeks.at(-1).weekStart;
+  const selected = weeks.find(w => w.weekStart === historySelection);
+  const label = w => `${fmtDate(w.weekStart)} – ${fmtDate(w.weekEnd)}${w.weekStart === historyData.currentWeek.start ? ' (идёт сейчас)' : ''}`;
+  host.innerHTML = `<div class="card"><h3>История по неделям</h3>
+    <p class="muted">Активный сычик — факт больше нуля за неделю. Текущая неделя ещё не завершена.</p>
+    <label for="historyWeek">Выберите неделю</label>
+    <select id="historyWeek" style="width:100%;padding:12px;font:inherit">${[...weeks].reverse().map(w =>
+      `<option value="${esc(w.weekStart)}" ${w.weekStart === historySelection ? 'selected' : ''}>${esc(label(w))}</option>`).join('')}</select>
+    <h4>${esc(label(selected))}</h4><p>Цель: ${selected.goal ?? '—'} · Мышей: ${selected.totalMice} · Активных сычиков: ${selected.activeOwlets}</p>
+    <div class="table-wrap"><table><thead><tr><th>Имя</th><th>План</th><th>Факт</th><th>%</th></tr></thead><tbody>
+    ${selected.records.map(r => `<tr><td>${esc(r.name)}</td><td>${Number(r.plan)}</td><td>${Number(r.fact)}</td><td>${r.plan ? Math.round(r.fact/r.plan*100) : '—'}%</td></tr>`).join('')}
+    </tbody></table></div></div><div class="card"><h3>Динамика по неделям</h3>
+    ${historyChart(weeks, 'totalMice', 'Сумма мышей (факт)', '#b15a38')}
+    ${historyChart(weeks, 'activeOwlets', 'Активные сычики', '#47786c')}
+    <details><summary>Значения по неделям</summary><div class="table-wrap"><table><thead><tr><th>Неделя</th><th>Мыши</th><th>Активные сычики</th></tr></thead><tbody>
+      ${weeks.map(w => `<tr><td>${esc(label(w))}</td><td>${w.totalMice}</td><td>${w.activeOwlets}</td></tr>`).join('')}
+    </tbody></table></div></details><button type="button" id="historyRefresh">Обновить историю</button></div>`;
+  $('#historyWeek').addEventListener('change', e => { historySelection = e.target.value; renderStatsHistory(host); });
+  $('#historyRefresh').addEventListener('click', () => loadStatsHistory(true));
+}
