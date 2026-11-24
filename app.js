@@ -783,7 +783,8 @@ let historyData = null;
 let historyPending = null;
 let historySelection = '';
 let historyOpen = false;
-const HISTORY_CACHE_KEY = 'stats_history_v1';
+let distributionSelection = '';
+const HISTORY_CACHE_KEY = 'stats_history_v2';
 
 async function loadStatsHistory(force = false) {
   let host = $('#statsHistory');
@@ -850,8 +851,42 @@ function historyChart(weeks) {
     <div style="overflow-x:auto"><svg role="img" aria-label="Активные сычики — столбцы, мыши — линия. Значения по двум шкалам" width="${width}" height="255" viewBox="0 0 ${width} 255" style="display:block;margin:auto">${grid}${bars}<polyline points="${points}" fill="none" stroke="#b15a38" stroke-width="3" stroke-linejoin="round"/>${dots}</svg></div>`;
 }
 
+function factDistribution(week) {
+  const counts = new Map();
+  for (const record of week.records || []) {
+    const value = record.fact;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) continue;
+    if (record.factEntered === false || (value === 0 && record.factEntered !== true)) continue;
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  return [...counts].sort(([a], [b]) => a - b);
+}
+
+function renderFactDistribution(week, host) {
+  const buckets = week ? factDistribution(week) : [];
+  if (!buckets.length) {
+    host.innerHTML = '<p class="muted">За эту неделю фактических значений пока нет.</p>';
+    return;
+  }
+  const maxCount = Math.max(...buckets.map(([, count]) => count));
+  host.innerHTML = `<div class="fact-distribution-row fact-distribution-head" aria-hidden="true">
+    <span>Мышей</span><span></span><span>Сычиков</span>
+  </div>
+  <ul class="fact-distribution-list" aria-label="Число сычиков по фактическим значениям">
+    ${buckets.map(([value, count]) => `<li class="fact-distribution-row">
+      <span><span class="fact-distribution-sr">Мышей: </span>${value}</span>
+      <span class="fact-distribution-track" aria-hidden="true"><span style="width:${count / maxCount * 100}%"></span></span>
+      <strong><span class="fact-distribution-sr">Сычиков: </span>${count}</strong>
+    </li>`).join('')}
+  </ul>`;
+}
+
 function renderStatsHistory(host) {
   const weeks = [...historyData.weeks].sort((a,b) => a.weekStart.localeCompare(b.weekStart));
+  const currentStart = historyData.currentWeek.start;
+  const distributionWeeks = weeks.some(w => w.weekStart === currentStart) ? weeks :
+    [...weeks, {weekStart: currentStart, weekEnd: historyData.currentWeek.end, records: []}];
+  if (!distributionWeeks.some(w => w.weekStart === distributionSelection)) distributionSelection = currentStart;
   const pastWeeks = weeks.filter(w => w.weekStart < historyData.currentWeek.start);
   if (!pastWeeks.some(w => w.weekStart === historySelection)) historySelection = pastWeeks.at(-1)?.weekStart || '';
   const selected = pastWeeks.find(w => w.weekStart === historySelection);
@@ -871,6 +906,15 @@ function renderStatsHistory(host) {
     <details><summary>Значения графика</summary><div class="table-wrap"><table><thead><tr><th>Неделя</th><th>Мыши</th><th>Активные сычики</th></tr></thead><tbody>
       ${weeks.map(w => `<tr><td>${esc(label(w))}${w.weekStart === historyData.currentWeek.start ? ' *' : ''}</td><td>${w.totalMice}</td><td>${w.activeOwlets}</td></tr>`).join('')}
     </tbody></table></div></details><button type="button" id="historyRefresh">Обновить график и историю</button></div>
+    <section class="card fact-distribution" aria-labelledby="factDistributionTitle">
+      <h3 id="factDistributionTitle">Распределение факта</h3>
+      <label for="factDistributionWeek">Неделя</label>
+      <select id="factDistributionWeek">${[...distributionWeeks].reverse().map(w =>
+        `<option value="${esc(w.weekStart)}" ${w.weekStart === distributionSelection ? 'selected' : ''}>
+          ${w.weekStart === currentStart ? 'Текущая неделя · ' : ''}${esc(label(w))}
+        </option>`).join('')}</select>
+      <div id="factDistributionChart" aria-live="polite"></div>
+    </section>
     <div class="card" id="historyPanel" ${historyOpen ? '' : 'hidden'}><h3>История прошлых недель</h3>${history}</div>`;
   $('#historyToggle').addEventListener('click', () => {
     historyOpen = !historyOpen;
@@ -879,5 +923,11 @@ function renderStatsHistory(host) {
     $('#historyToggle').textContent = historyOpen ? 'Скрыть историю' : 'История прошлых недель';
   });
   if (selected) $('#historyWeek').addEventListener('change', e => { historySelection = e.target.value; renderStatsHistory(host); });
+  const chart = $('#factDistributionChart');
+  renderFactDistribution(distributionWeeks.find(w => w.weekStart === distributionSelection), chart);
+  $('#factDistributionWeek').addEventListener('change', e => {
+    distributionSelection = e.target.value;
+    renderFactDistribution(distributionWeeks.find(w => w.weekStart === distributionSelection), chart);
+  });
   $('#historyRefresh').addEventListener('click', () => loadStatsHistory(true));
 }
