@@ -869,16 +869,38 @@ function renderFactDistribution(week, host) {
     return;
   }
   const maxCount = Math.max(...buckets.map(([, count]) => count));
-  host.innerHTML = `<div class="fact-distribution-row fact-distribution-head" aria-hidden="true">
-    <span>Мышей</span><span></span><span>Сычиков</span>
-  </div>
-  <ul class="fact-distribution-list" aria-label="Число сычиков по фактическим значениям">
-    ${buckets.map(([value, count]) => `<li class="fact-distribution-row">
-      <span><span class="fact-distribution-sr">Мышей: </span>${value}</span>
-      <span class="fact-distribution-track" aria-hidden="true"><span style="width:${count / maxCount * 100}%"></span></span>
-      <strong><span class="fact-distribution-sr">Сычиков: </span>${count}</strong>
-    </li>`).join('')}
-  </ul>`;
+  const tick = Math.max(1, Math.ceil(maxCount / 4));
+  const top = 26, bottom = 188, left = 46;
+  const widestLabel = Math.max(...buckets.map(([value]) => String(value).length));
+  const step = Math.max(44, widestLabel * 8 + 12);
+  const width = Math.max(310, left + buckets.length * step + 14);
+  const right = width - 14;
+  const slot = (right - left) / buckets.length;
+  const barWidth = Math.min(34, slot * .58);
+  const y = count => bottom - count / (tick * 4) * (bottom - top);
+  const grid = Array.from({length: 5}, (_, i) => {
+    const value = tick * i;
+    return `<line x1="${left}" x2="${right}" y1="${y(value)}" y2="${y(value)}" stroke="#dedbd2"/>
+      <text x="${left - 8}" y="${y(value) + 4}" text-anchor="end" fill="#466f68">${value}</text>`;
+  }).join('');
+  const bars = buckets.map(([value, count], index) => {
+    const x = left + slot * (index + .5);
+    return `<g>
+      <rect x="${x - barWidth / 2}" y="${y(count)}" width="${barWidth}" height="${bottom - y(count)}" rx="3" fill="#56857b"/>
+      <text x="${x}" y="${y(count) - 7}" text-anchor="middle" fill="#365b54">${count}</text>
+      <text x="${x}" y="${bottom + 19}" text-anchor="middle" fill="currentColor">${value}</text>
+    </g>`;
+  }).join('');
+  host.innerHTML = `<p class="fact-distribution-axis" aria-hidden="true">Сычиков</p>
+    <div class="fact-distribution-scroll" role="region" aria-label="График распределения факта" tabindex="0">
+      <svg aria-hidden="true" class="fact-distribution-svg" style="min-width:${width}px" viewBox="0 0 ${width} 218">
+        ${grid}${bars}
+      </svg>
+    </div>
+    <p class="fact-distribution-axis fact-distribution-x" aria-hidden="true">Мышей</p>
+    <ul class="fact-distribution-sr" aria-label="Распределение факта">
+      ${buckets.map(([value, count]) => `<li>Мышей: ${value}. Сычиков: ${count}.</li>`).join('')}
+    </ul>`;
 }
 
 function renderStatsHistory(host) {
